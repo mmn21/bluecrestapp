@@ -708,9 +708,13 @@ def update_table(n_clicks, asset1, asset2, z_entry, z_exit, z_window):
         return dash.no_update
     
     # Calculate the PnL
-    pnl = am.simulate_pairs_trading_strategy(price_data, asset1, asset2, z_entry, z_exit, z_window)['PnL%']
+    strat =  am.simulate_pairs_trading_strategy(price_data, asset1, asset2, z_entry, z_exit, z_window)
 
-    metrics = am.calculate_metrics(pnl)
+    pnl = strat['PnL%']
+    dates = strat['Date']
+
+    years = (dates.iloc[-1] - dates.iloc[0]).days / 365.25  
+    metrics = am.calculate_metrics(years,pnl)
 
     return metrics.to_dict('records')
 
@@ -773,11 +777,11 @@ def update_heatmap_and_table(n_clicks, asset1, asset2, rolling_window_2, eval_me
     if n_clicks is None:
         return dash.no_update
     
-    df = am.parameter_performance(asset1,asset2,rolling_window_2, eval_metric) 
+    df = am.parameter_performance(price_data,asset1,asset2,rolling_window_2, eval_metric) 
     df = df.apply(pd.to_numeric, errors='coerce')
     
     # Use helper function to calculate optimal set of parameters
-    params_df = optimal_conditions_table(df,rolling_window_2,eval_metric)
+    params_df = am.optimal_conditions_table(df,rolling_window_2,eval_metric)
  
     fig = px.imshow(df,color_continuous_scale = "rdylgn",
     labels=dict(x="Entry Z-Score", y="Exit Z-Score", color=eval_metric))
@@ -805,9 +809,15 @@ def update_table(n_clicks, asset1, asset2, rsi_long, rsi_short, rsi_exit, rsi_wi
         return dash.no_update
     
     # Calculate the PnL
-    pnl = am.simulate_rsi_trading_strategy(price_data, asset1, asset2, rsi_short,rsi_long,rsi_exit,rsi_window)['PnL%']
+    strat =  am.simulate_rsi_trading_strategy(price_data, asset1, asset2, rsi_short,rsi_long,rsi_exit,rsi_window)
 
-    metrics = am.calculate_metrics(pnl)
+    pnl = strat['PnL%']
+    dates = strat['Entry Date']
+
+    years = (dates.iloc[-1] - dates.iloc[0]).days / 365.25  
+
+    metrics = am.calculate_metrics(years,pnl)
+
 
     return metrics.to_dict('records')
 
@@ -869,7 +879,7 @@ def update_heatmap_and_table(n_clicks, asset1, asset2, rolling_window_2, eval_me
     if n_clicks is None:
         return dash.no_update
     
-    df = am.rsi_parameter_performance(asset1,asset2,rolling_window_2, eval_metric) 
+    df = am.rsi_parameter_performance(price_data,asset1,asset2,rolling_window_2, eval_metric) 
     df = df.apply(pd.to_numeric, errors='coerce')
     
     params_df = am.optimal_conditions_table_rsi(df,rolling_window_2,eval_metric)
