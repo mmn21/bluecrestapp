@@ -422,27 +422,25 @@ def simulate_rsi_trading_strategy(df, ticker1, ticker2, upper_rsi_threshold, low
 
 #### STRATEGY METRICS HELPER FUNCTIONS ####
 
-def calculate_sharpe_ratio(returns: list, risk_free_rate: float = 0) -> float:
+def calculate_sharpe_ratio(years, returns: list, risk_free_rate: float = 0) -> float:
     """Calculate the Sharpe Ratio."""
-    years = ((price_data.index[-1] - price_data.index[0]).days)/365
     periods_per_year = len(returns)/years
     excess_returns = np.array(returns) - risk_free_rate / periods_per_year
     
     return np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(periods_per_year)
 
-def calculate_sortino_ratio(returns: list, risk_free_rate: float = 0) -> float:
+def calculate_sortino_ratio(years, returns: list, risk_free_rate: float = 0) -> float:
     """Calculate the Sortino Ratio."""
-    years = ((price_data.index[-1] - price_data.index[0]).days)/365
     periods_per_year = len(returns)/years
     excess_returns = np.array(returns) - risk_free_rate / periods_per_year
     downside_returns = excess_returns[excess_returns < 0]
     return np.mean(excess_returns) / np.std(downside_returns) * np.sqrt(periods_per_year)
 
-def calculate_cagr(returns: list) -> float:
+def calculate_cagr(years,returns: list) -> float:
     """Calculate the Compound Annual Growth Rate (CAGR)."""
     cumulative_return = np.sum(returns)
     n_periods = len(returns)
-    years = ((price_data.index[-1] - price_data.index[0]).days)/365
+
     periods_per_year = len(returns)/years
     return (cumulative_return/100)**(periods_per_year / n_periods) 
 
@@ -453,13 +451,13 @@ def calculate_max_drawdown(returns: list) -> float:
     drawdowns = cumulative_returns - running_max
     return np.min(drawdowns)
 
-def calculate_calmar_ratio(returns: list) -> float:
+def calculate_calmar_ratio(years,returns: list) -> float:
     """Calculate the Calmar Ratio."""
-    cagr = calculate_cagr(returns)
+    cagr = calculate_cagr(years,returns)
     max_drawdown = calculate_max_drawdown(returns)
     return cagr / abs(max_drawdown)
 
-def calculate_metrics(returns: list, risk_free_rate: float = 0) -> pd.DataFrame:
+def calculate_metrics(years,returns: list, risk_free_rate: float = 0) -> pd.DataFrame:
     """
     Calculate and return a table of key trading strategy metrics.
 
@@ -472,11 +470,10 @@ def calculate_metrics(returns: list, risk_free_rate: float = 0) -> pd.DataFrame:
     pd.DataFrame: A DataFrame with metric names and their corresponding values.
     """
     total_return = np.sum(returns)
-    years = ((price_data.index[-1] - price_data.index[0]).days)/365
     periods_per_year = len(returns)/years
-    sharpe_ratio = calculate_sharpe_ratio(returns, risk_free_rate)
-    sortino_ratio = calculate_sortino_ratio(returns, risk_free_rate)
-    calmar_ratio = calculate_calmar_ratio(returns)
+    sharpe_ratio = calculate_sharpe_ratio(years, returns, risk_free_rate)
+    sortino_ratio = calculate_sortino_ratio(years,returns, risk_free_rate)
+    calmar_ratio = calculate_calmar_ratio(years,returns)
     max_drawdown = calculate_max_drawdown(returns)
 
     metrics = {
@@ -486,7 +483,7 @@ def calculate_metrics(returns: list, risk_free_rate: float = 0) -> pd.DataFrame:
 
     return pd.DataFrame(metrics).round(3)
 
-def parameter_performance(ticker1,ticker2,rolling_window, metric):
+def parameter_performance(df,ticker1,ticker2,rolling_window, metric):
     z_entry =np.round(np.arange(0, 4, 0.1),1)  # Z Score Range for entry
     z_exit = np.round(np.arange(0, 2.5, 0.10),1)    # Z Score Range for exit
     
@@ -495,9 +492,15 @@ def parameter_performance(ticker1,ticker2,rolling_window, metric):
     for x in z_entry:
         for y in z_exit:
             try:
-                heatmap_data.loc[y,x] = calculate_metrics(simulate_pairs_trading_strategy(price_data, ticker1,ticker2, x ,y,rolling_window)['PnL%']).set_index('Metric',drop = True).T.reset_index(drop = True)[metric][0]
+                strat = simulate_pairs_trading_strategy(df, ticker1,ticker2, x ,y,rolling_window)
+                returns = strat['PnL%']
+                dates = strat['Date']
+                years = (dates.iloc[-1] - dates.iloc[0]).days / 365.25 
+
+                heatmap_data.loc[y,x] = calculate_metrics(years ,returns).set_index('Metric',drop = True).T.reset_index(drop = True)[metric][0]
             except:
                 heatmap_data.loc[y,x] = 0
+           
 
     return heatmap_data
 
@@ -540,7 +543,7 @@ def optimal_conditions_table_rsi(perf_df,window,metric):
     output_df.columns = ['Param','Value']
     return output_df
 
-def rsi_parameter_performance(ticker1,ticker2,rolling_window, metric):
+def rsi_parameter_performance(df,ticker1,ticker2,rolling_window, metric):
     long_entry = [0,5,10,15,20,25,30,35,40,45]
     short_entry = [55,60,65,70,75,80,85,90,95,100]
     
@@ -549,7 +552,11 @@ def rsi_parameter_performance(ticker1,ticker2,rolling_window, metric):
     for x in long_entry:
         for y in short_entry:
             try:
-                heatmap_data.loc[x,y] = calculate_metrics(simulate_rsi_trading_strategy(price_data, ticker1, ticker2, y,x,50, rolling_window)['PnL%']).set_index('Metric',drop = True).T.reset_index(drop = True)[metric][0]
+                strat = simulate_rsi_trading_strategy(df, ticker1, ticker2, y,x,50, rolling_window)
+                returns = strat['PnL%']
+                dates = strat['Entry Date']
+                years = (dates.iloc[-1] - dates.iloc[0]).days / 365.25 
+                heatmap_data.loc[x,y] = calculate_metrics(years,returns).set_index('Metric',drop = True).T.reset_index(drop = True)[metric][0]
             except:
                 heatmap_data.loc[x,y] = 0
 
