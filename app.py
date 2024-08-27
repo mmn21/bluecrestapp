@@ -707,8 +707,10 @@ def update_table(n_clicks, asset1, asset2, z_entry, z_exit, z_window):
     if n_clicks is None:
         return dash.no_update
     
+    df = am.fetch_tables_as_dataframe('stocks_data.db')
+
     # Calculate the PnL
-    strat =  am.simulate_pairs_trading_strategy(price_data, asset1, asset2, z_entry, z_exit, z_window)
+    strat =  am.simulate_pairs_trading_strategy(df, asset1, asset2, z_entry, z_exit, z_window)
 
     pnl = strat['PnL%']
     dates = strat['Date']
@@ -735,6 +737,8 @@ def update_graph(n_clicks, asset1, asset2, z_entry, z_exit, z_window):
     if n_clicks is None:
         return dash.no_update
     
+
+
     pnl = am.simulate_pairs_trading_strategy(price_data, asset1, asset2, z_entry, z_exit, z_window)['PnL%']
 
     # Create the figure
@@ -786,7 +790,6 @@ def update_heatmap_and_table(n_clicks, asset1, asset2, rolling_window_2, eval_me
     fig = px.imshow(df,color_continuous_scale = "rdylgn",
     labels=dict(x="Entry Z-Score", y="Exit Z-Score", color=eval_metric))
     fig.update_layout(title="Strategy Performance Heatmap", title_x=0.5)
-    fig.show()
     
     return fig, params_df.to_dict('records')
 
@@ -811,7 +814,7 @@ def update_table(n_clicks, asset1, asset2, rsi_long, rsi_short, rsi_exit, rsi_wi
     # Calculate the PnL
     strat =  am.simulate_rsi_trading_strategy(price_data, asset1, asset2, rsi_short,rsi_long,rsi_exit,rsi_window)
 
-    pnl = strat['PnL%']
+    pnl = strat['PnL%'].dropna()
     dates = strat['Entry Date']
 
     years = (dates.iloc[-1] - dates.iloc[0]).days / 365.25  
@@ -888,7 +891,6 @@ def update_heatmap_and_table(n_clicks, asset1, asset2, rolling_window_2, eval_me
     fig = px.imshow(df,color_continuous_scale = "rdylgn",
     labels=dict(x="RSI Short Level", y="RSI Long Level", color=eval_metric))
     fig.update_layout(title="Strategy Performance Heatmap", title_x=0.5)
-    fig.show()
     
     return fig,params_df.to_dict('records')
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+
 
 
 import yfinance as yf
@@ -11,7 +11,6 @@ import csv
 from datetime import datetime
 
 
-# In[4]:
 
 
 def get_tickers():
